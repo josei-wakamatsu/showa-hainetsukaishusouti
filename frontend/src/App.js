@@ -9,7 +9,7 @@ function App() {
   const [error, setError] = useState("");
 
   // Render のバックエンド URL に変更
-  const backendUrl = "https://<your-backend-name>.onrender.com"; // Render でのバックエンド URL に置き換えてください
+  const backendUrl = "https://hainetukaishusouti.onrender.com"; // Render でのバックエンド URL に置き換えてください
 
   useEffect(() => {
     const fetchLatestData = () => {
