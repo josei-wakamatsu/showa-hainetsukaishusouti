@@ -1,0 +1,6 @@
+# 無視するディレクトリやファイル
+node_modules/
+.env
+*.log
+dist/
+build/
