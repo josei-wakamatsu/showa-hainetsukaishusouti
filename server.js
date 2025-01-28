@@ -4,7 +4,7 @@ const cors = require("cors");
 const path = require("path");
 
 const app = express();
-const PORT = 3098;
+const PORT = 3099;
 
 // デバッグ用: 環境変数の確認
 console.log("Environment Variables:");
