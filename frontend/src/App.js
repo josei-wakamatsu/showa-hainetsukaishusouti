@@ -11,7 +11,7 @@ function App() {
   useEffect(() => {
     const fetchLatestData = () => {
       axios
-        .get("http://localhost:3098/api/data/hainetukaishu")
+        .get("http://localhost:3099/api/data/hainetukaishu")
         .then((response) => {
           const latestData = response.data;
 
@@ -50,17 +50,17 @@ function App() {
 
     const fetchTotals = () => {
       // 日合計
-      axios.get("http://localhost:3098/api/data/daily-total/hainetukaishu")
+      axios.get("http://localhost:3099/api/data/daily-total/hainetukaishu")
         .then((response) => setDailyTotal(response.data.dailyTotal))
         .catch((error) => console.error("Failed to fetch daily total:", error));
 
       // 5分合計
-      axios.get("http://localhost:3098/api/data/five-minutes-total/hainetukaishu")
+      axios.get("http://localhost:3099/api/data/five-minutes-total/hainetukaishu")
         .then((response) => setFiveMinutesTotal(response.data.fiveMinutesTotal))
         .catch((error) => console.error("Failed to fetch five minutes total:", error));
 
       // 1時間合計
-      axios.get("http://localhost:3098/api/data/hourly-total/hainetukaishu")
+      axios.get("http://localhost:3099/api/data/hourly-total/hainetukaishu")
         .then((response) => setHourlyTotal(response.data.hourlyTotal))
         .catch((error) => console.error("Failed to fetch hourly total:", error));
     };
