@@ -8,10 +8,13 @@ function App() {
   const [hourlyTotal, setHourlyTotal] = useState(0); // 1時間合計
   const [error, setError] = useState("");
 
+  // Render のバックエンド URL に変更
+  const backendUrl = "https://<your-backend-name>.onrender.com"; // Render でのバックエンド URL に置き換えてください
+
   useEffect(() => {
     const fetchLatestData = () => {
       axios
-        .get("http://localhost:3099/api/data/hainetukaishu")
+        .get(`${backendUrl}/api/data/hainetukaishu`)
         .then((response) => {
           const latestData = response.data;
 
@@ -50,17 +53,17 @@ function App() {
 
     const fetchTotals = () => {
       // 日合計
-      axios.get("http://localhost:3099/api/data/daily-total/hainetukaishu")
+      axios.get(`${backendUrl}/api/data/daily-total/hainetukaishu`)
         .then((response) => setDailyTotal(response.data.dailyTotal))
         .catch((error) => console.error("Failed to fetch daily total:", error));
 
       // 5分合計
-      axios.get("http://localhost:3099/api/data/five-minutes-total/hainetukaishu")
+      axios.get(`${backendUrl}/api/data/five-minutes-total/hainetukaishu`)
         .then((response) => setFiveMinutesTotal(response.data.fiveMinutesTotal))
         .catch((error) => console.error("Failed to fetch five minutes total:", error));
 
       // 1時間合計
-      axios.get("http://localhost:3099/api/data/hourly-total/hainetukaishu")
+      axios.get(`${backendUrl}/api/data/hourly-total/hainetukaishu`)
         .then((response) => setHourlyTotal(response.data.hourlyTotal))
         .catch((error) => console.error("Failed to fetch hourly total:", error));
     };
@@ -73,7 +76,7 @@ function App() {
     }, 1000); // 1秒ごとにデータを取得
 
     return () => clearInterval(interval); // クリーンアップ
-  }, []);
+  }, [backendUrl]);
 
   return (
     <div>
