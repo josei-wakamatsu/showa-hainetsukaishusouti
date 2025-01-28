@@ -6,6 +6,13 @@ const path = require("path");
 const app = express();
 const PORT = 3098;
 
+// デバッグ用: 環境変数の確認
+console.log("Environment Variables:");
+console.log("COSMOSDB_ENDPOINT:", process.env.COSMOSDB_ENDPOINT);
+console.log("COSMOSDB_KEY:", process.env.COSMOSDB_KEY);
+console.log("DATABASE_ID:", process.env.DATABASE_ID);
+console.log("CONTAINER_ID:", process.env.CONTAINER_ID);
+
 // Cosmos DB 接続情報
 const endpoint = process.env.COSMOSDB_ENDPOINT;
 const key = process.env.COSMOSDB_KEY;
@@ -25,7 +32,7 @@ app.get("/", (req, res) => {
   res.send("Backend is running!");
 });
 
-// 最新データ取得エンドポイント
+// その他の API エンドポイント
 app.get("/api/data/:deviceId", async (req, res) => {
   const deviceId = req.params.deviceId;
   try {
@@ -46,13 +53,13 @@ app.get("/api/data/:deviceId", async (req, res) => {
   }
 });
 
-// 他のエンドポイント (例: five-minutes-total, hourly-total) は省略
-
-// ワイルドカードルート (React アプリ用)
+// デバッグ用: 404用エンドポイント
 app.get("*", (req, res) => {
+  console.log(`404 Error for URL: ${req.url}`);
   res.sendFile(path.join(__dirname, "frontend/build", "index.html"));
 });
 
 // サーバー起動
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+});
