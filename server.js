@@ -35,16 +35,22 @@ app.get("/api/data/:deviceId", async (req, res) => {
       query: `SELECT TOP 1 * FROM c WHERE c.device = @deviceId ORDER BY c.time DESC`,
       parameters: [{ name: "@deviceId", value: deviceId }],
     };
+
     const { resources: items } = await container.items.query(querySpec).fetchAll();
-    if (items.length === 0) {
-      return res.status(404).json({ error: `No data found for deviceId: ${deviceId}` });
+
+    if (!items.length) {
+      console.error(`No data found for deviceId: ${deviceId}`);
+      return res.status(404).json({ error: "No data found" });
     }
-    res.status(200).json(items[0]);
+
+    console.log("Fetched data:", items[0]); // デバッグ用
+    res.status(200).json(items[0]); // 正しいデータを送信
   } catch (error) {
     console.error("Error fetching latest data:", error);
     res.status(500).json({ error: "Failed to fetch latest data" });
   }
 });
+
 
 // 5分前の合計熱量
 app.get("/api/data/five-minutes-total/:deviceId", async (req, res) => {
