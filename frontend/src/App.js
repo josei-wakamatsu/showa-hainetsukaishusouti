@@ -3,9 +3,8 @@ import axios from "axios";
 
 function App() {
   const [latestItem, setLatestItem] = useState(null);
-  const [dailyTotal, setDailyTotal] = useState(0);
-  const [fiveMinutesTotal, setFiveMinutesTotal] = useState(0);
-  const [hourlyTotal, setHourlyTotal] = useState(0);
+  const [yesterdayTotal, setYesterdayTotal] = useState(0);
+  const [todayTotal, setTodayTotal] = useState(0);
   const [error, setError] = useState("");
 
   const backendUrl = "https://showa-hainetsukaishusouti.onrender.com";
@@ -22,11 +21,11 @@ function App() {
 
         const flowRateLpm = latestData.Flow1 + latestData.Flow2;
         const deltaT = latestData.tempC3 - latestData.tempC4;
-        const density = 1000; 
-        const specificHeat = 4186; 
+        const density = 1000;
+        const specificHeat = 4186;
         const flowRateM3s = flowRateLpm / (1000 * 60);
         const massFlowRate = flowRateM3s * density;
-        const heatTransfer = massFlowRate * specificHeat * deltaT / 1000; 
+        const heatTransfer = massFlowRate * specificHeat * deltaT / 1000;
 
         setLatestItem({
           ...latestData,
@@ -43,15 +42,13 @@ function App() {
 
     const fetchTotals = async () => {
       try {
-        const [dailyRes, fiveMinRes, hourlyRes] = await Promise.all([
-          axios.get(`${backendUrl}/api/data/daily-total/hainetukaishu`),
-          axios.get(`${backendUrl}/api/data/five-minutes-total/hainetukaishu`),
-          axios.get(`${backendUrl}/api/data/hourly-total/hainetukaishu`),
+        const [yesterdayRes, todayRes] = await Promise.all([
+          axios.get(`${backendUrl}/api/data/yesterday-total/hainetukaishu`),
+          axios.get(`${backendUrl}/api/data/today-total/hainetukaishu`),
         ]);
 
-        setDailyTotal(Number(dailyRes.data.dailyTotal) || 0);
-        setFiveMinutesTotal(Number(fiveMinRes.data.fiveMinutesTotal) || 0);
-        setHourlyTotal(Number(hourlyRes.data.hourlyTotal) || 0);
+        setYesterdayTotal(Number(yesterdayRes.data.yesterdayTotal) || 0);
+        setTodayTotal(Number(todayRes.data.todayTotal) || 0);
       } catch (error) {
         console.error("Failed to fetch totals:", error);
       }
@@ -59,7 +56,7 @@ function App() {
 
     fetchLatestData();
     fetchTotals();
-    
+
     const interval = setInterval(() => {
       fetchLatestData();
       fetchTotals();
@@ -76,18 +73,15 @@ function App() {
       ) : (
         <>
           {latestItem && (
-            <div style={{ marginBottom: "20px", border: "1px solid black", padding: "10px" }}>
+            <div>
               <h2>Latest Data</h2>
-              <p><strong>Flow Rate (L/min):</strong> {latestItem.flowRateLpm}</p>
-              <p><strong>Temperature Difference (TempC3 - TempC4):</strong> {latestItem.deltaT} °C</p>
-              <p><strong>Heat Transfer:</strong> {latestItem.heatTransfer} kW</p>
+              <p>Heat Transfer: {latestItem.heatTransfer} kW</p>
             </div>
           )}
-          <div style={{ marginTop: "20px", border: "1px solid black", padding: "10px" }}>
+          <div>
             <h2>Cumulative Data</h2>
-            <p><strong>Five Minutes Total:</strong> {fiveMinutesTotal.toFixed(2)} kW</p>
-            <p><strong>Hourly Total:</strong> {hourlyTotal.toFixed(2)} kW</p>
-            <p><strong>Daily Total:</strong> {dailyTotal.toFixed(2)} kW</p>
+            <p>Yesterday Total: {yesterdayTotal} kW</p>
+            <p>Today Total: {todayTotal} kW</p>
           </div>
         </>
       )}
