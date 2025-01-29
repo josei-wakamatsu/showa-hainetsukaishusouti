@@ -60,7 +60,7 @@ function App() {
     const interval = setInterval(() => {
       fetchLatestData();
       fetchTotals();
-    }, 5000);
+    }, 10000);
 
     return () => clearInterval(interval);
   }, [backendUrl]);
