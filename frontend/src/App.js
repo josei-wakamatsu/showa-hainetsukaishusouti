@@ -16,7 +16,7 @@ function App() {
         const response = await axios.get(`${backendUrl}/api/data/hainetukaishu`);
         const latestData = response.data;
 
-        if (!latestData.Flow1 || !latestData.Flow2 || !latestData.tempC3 || !latestData.tempC4) {
+        if (!latestData || !latestData.Flow1 || !latestData.Flow2 || !latestData.tempC3 || !latestData.tempC4) {
           throw new Error("Invalid data received");
         }
 
@@ -26,7 +26,7 @@ function App() {
         const specificHeat = 4186; 
         const flowRateM3s = flowRateLpm / (1000 * 60);
         const massFlowRate = flowRateM3s * density;
-        const heatTransfer = massFlowRate * specificHeat * deltaT / 1000; 
+        const heatTransfer = (massFlowRate * specificHeat * deltaT) / 1000; 
 
         setLatestItem({
           ...latestData,
