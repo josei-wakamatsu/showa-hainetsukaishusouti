@@ -4,7 +4,7 @@ const cors = require("cors");
 const path = require("path");
 
 const app = express();
-const PORT = process.env.PORT || 3098;
+const PORT = 3099;
 
 // Cosmos DB 接続情報
 const endpoint = process.env.COSMOSDB_ENDPOINT;
@@ -16,82 +16,103 @@ const containerId = process.env.CONTAINER_ID;
 // ミドルウェア
 app.use(cors());
 app.use(express.json());
+
+// 静的ファイルの提供
 app.use(express.static(path.join(__dirname, "frontend/build")));
 
-// 時間範囲を取得する関数
-const getTimeRange = (minutes) => {
+// ルートエンドポイント
+app.get("/", (req, res) => {
+  res.send("Backend is running!");
+});
+
+// 最新データの取得
+app.get("/api/data/:deviceId", async (req, res) => {
+  const deviceId = req.params.deviceId;
+  try {
+    const database = client.database(databaseId);
+    const container = database.container(containerId);
+    const querySpec = {
+      query: `SELECT TOP 1 * FROM c WHERE c.device = @deviceId ORDER BY c.time DESC`,
+      parameters: [{ name: "@deviceId", value: deviceId }],
+    };
+    const { resources: items } = await container.items.query(querySpec).fetchAll();
+    if (items.length === 0) {
+      return res.status(404).json({ error: `No data found for deviceId: ${deviceId}` });
+    }
+    res.status(200).json(items[0]);
+  } catch (error) {
+    console.error("Error fetching latest data:", error);
+    res.status(500).json({ error: "Failed to fetch latest data" });
+  }
+});
+
+// 5分前の合計熱量
+app.get("/api/data/five-minutes-total/:deviceId", async (req, res) => {
+  const deviceId = req.params.deviceId;
   const now = new Date();
-  const startTime = new Date(now.getTime() - minutes * 60 * 1000);
-  return { startTime: startTime.toISOString(), endTime: now.toISOString() };
-};
-
-// 5分間のデータ取得
-app.get("/api/data/5min/:deviceId", async (req, res) => {
-  const deviceId = req.params.deviceId;
-  const { startTime, endTime } = getTimeRange(5);
+  const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
 
   try {
     const database = client.database(databaseId);
     const container = database.container(containerId);
     const querySpec = {
       query: `SELECT c.Flow1, c.Flow2, c.tempC3, c.tempC4 FROM c 
-              WHERE c.device = @deviceId AND c.time >= @startTime AND c.time <= @endTime`,
+              WHERE c.device = @deviceId AND c.time >= @startTime`,
       parameters: [
         { name: "@deviceId", value: deviceId },
-        { name: "@startTime", value: startTime },
-        { name: "@endTime", value: endTime },
+        { name: "@startTime", value: fiveMinutesAgo },
       ],
     };
 
-    console.log(`Fetching 5 min data from ${startTime} to ${endTime}`);
+    console.log(`Fetching data from ${fiveMinutesAgo} for device ${deviceId}`);
 
     const { resources: items } = await container.items.query(querySpec).fetchAll();
-    const totalHeat = calculateHeat(items);
-    res.status(200).json({ heatTransfer: totalHeat });
+    let totalHeatTransfer = calculateTotalHeat(items);
+
+    res.status(200).json({ fiveMinutesTotal: totalHeatTransfer.toFixed(2) });
   } catch (error) {
-    console.error("Error fetching 5 min data:", error);
-    res.status(500).json({ error: "Failed to fetch 5 min data" });
+    console.error("Error fetching five minutes total:", error);
+    res.status(500).json({ error: "Failed to fetch five minutes total" });
   }
 });
 
-// 1時間のデータ取得
-app.get("/api/data/1hour/:deviceId", async (req, res) => {
+// 1時間前の合計熱量
+app.get("/api/data/hourly-total/:deviceId", async (req, res) => {
   const deviceId = req.params.deviceId;
-  const { startTime, endTime } = getTimeRange(60);
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
   try {
     const database = client.database(databaseId);
     const container = database.container(containerId);
     const querySpec = {
       query: `SELECT c.Flow1, c.Flow2, c.tempC3, c.tempC4 FROM c 
-              WHERE c.device = @deviceId AND c.time >= @startTime AND c.time <= @endTime`,
+              WHERE c.device = @deviceId AND c.time >= @startTime`,
       parameters: [
         { name: "@deviceId", value: deviceId },
-        { name: "@startTime", value: startTime },
-        { name: "@endTime", value: endTime },
+        { name: "@startTime", value: oneHourAgo },
       ],
     };
 
-    console.log(`Fetching 1 hour data from ${startTime} to ${endTime}`);
+    console.log(`Fetching data from ${oneHourAgo} for device ${deviceId}`);
 
     const { resources: items } = await container.items.query(querySpec).fetchAll();
-    const totalHeat = calculateHeat(items);
-    res.status(200).json({ heatTransfer: totalHeat });
+    let totalHeatTransfer = calculateTotalHeat(items);
+
+    res.status(200).json({ hourlyTotal: totalHeatTransfer.toFixed(2) });
   } catch (error) {
-    console.error("Error fetching 1 hour data:", error);
-    res.status(500).json({ error: "Failed to fetch 1 hour data" });
+    console.error("Error fetching hourly total:", error);
+    res.status(500).json({ error: "Failed to fetch hourly total" });
   }
 });
 
-// 前日1日分のデータ取得
+// 昨日の合計熱量
 app.get("/api/data/daily-total/:deviceId", async (req, res) => {
   const deviceId = req.params.deviceId;
   const now = new Date();
-
   const startOfYesterday = new Date(now);
   startOfYesterday.setDate(now.getDate() - 1);
   startOfYesterday.setHours(0, 0, 0, 0);
-
   const endOfYesterday = new Date(startOfYesterday);
   endOfYesterday.setHours(23, 59, 59, 999);
 
@@ -108,36 +129,32 @@ app.get("/api/data/daily-total/:deviceId", async (req, res) => {
       ],
     };
 
-    console.log(`Fetching daily total data from ${startOfYesterday.toISOString()} to ${endOfYesterday.toISOString()}`);
+    console.log(`Fetching data from ${startOfYesterday.toISOString()} to ${endOfYesterday.toISOString()} for device ${deviceId}`);
 
     const { resources: items } = await container.items.query(querySpec).fetchAll();
-    const totalHeat = calculateHeat(items);
-    res.status(200).json({ dailyTotal: totalHeat });
+    let totalHeatTransfer = calculateTotalHeat(items);
+
+    res.status(200).json({ dailyTotal: totalHeatTransfer.toFixed(2) });
   } catch (error) {
     console.error("Error fetching daily total:", error);
     res.status(500).json({ error: "Failed to fetch daily total" });
   }
 });
 
-// 熱量計算関数
-const calculateHeat = (items) => {
+// **共通の熱量計算関数**
+function calculateTotalHeat(items) {
   let totalHeatTransfer = 0;
   items.forEach((data) => {
     const flowRateLpm = data.Flow1 + data.Flow2;
     const deltaT = data.tempC3 - data.tempC4;
-    const density = 1000;  // 水の密度 (kg/m^3)
-    const specificHeat = 4186; // 水の比熱 (J/kg・K)
-    const flowRateM3s = flowRateLpm / (1000 * 60); // L/min → m^3/s
+    const density = 1000;
+    const specificHeat = 4186;
+    const flowRateM3s = flowRateLpm / (1000 * 60);
     const massFlowRate = flowRateM3s * density;
-    totalHeatTransfer += (massFlowRate * specificHeat * deltaT) / 1000; // kJに変換
+    totalHeatTransfer += (massFlowRate * specificHeat * deltaT) / 1000;
   });
-  return totalHeatTransfer.toFixed(2);
-};
-
-// フロントエンドに対応
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "frontend/build", "index.html"));
-});
+  return totalHeatTransfer;
+}
 
 // サーバー起動
 app.listen(PORT, () => {
