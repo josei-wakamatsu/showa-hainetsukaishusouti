@@ -44,13 +44,12 @@ app.get("/api/data/:deviceId", async (req, res) => {
     }
 
     console.log("Fetched data:", items[0]); // デバッグ用
-    res.status(200).json(items[0]); // 正しいデータを送信
+    res.status(200).json(items[0]);
   } catch (error) {
     console.error("Error fetching latest data:", error);
     res.status(500).json({ error: "Failed to fetch latest data" });
   }
 });
-
 
 // 5分前の合計熱量
 app.get("/api/data/five-minutes-total/:deviceId", async (req, res) => {
@@ -151,8 +150,8 @@ app.get("/api/data/daily-total/:deviceId", async (req, res) => {
 function calculateTotalHeat(items) {
   let totalHeatTransfer = 0;
   items.forEach((data) => {
-    const flowRateLpm = data.Flow1 + data.Flow2;
-    const deltaT = data.tempC3 - data.tempC4;
+    const flowRateLpm = (data.Flow1 || 0) + (data.Flow2 || 0);
+    const deltaT = (data.tempC3 || 0) - (data.tempC4 || 0);
     const density = 1000;
     const specificHeat = 4186;
     const flowRateM3s = flowRateLpm / (1000 * 60);
