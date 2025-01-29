@@ -25,74 +25,31 @@ app.get("/", (req, res) => {
   res.send("Backend is running!");
 });
 
-// **共通のデータ取得関数**
-async function fetchHeatData(deviceId, startTime, endTime = null) {
+// **リアルタイムデータ取得**
+app.get("/api/data/:deviceId", async (req, res) => {
+  const deviceId = req.params.deviceId;
   try {
     const database = client.database(databaseId);
     const container = database.container(containerId);
-
-    let querySpec = {
-      query: `SELECT c.Flow1, c.Flow2, c.tempC3, c.tempC4 FROM c 
-              WHERE c.device = @deviceId AND c.time >= @startTime` +
-              (endTime ? " AND c.time <= @endTime" : ""),
-      parameters: [{ name: "@deviceId", value: deviceId }, { name: "@startTime", value: startTime }],
+    const querySpec = {
+      query: `SELECT TOP 1 * FROM c WHERE c.device = @deviceId ORDER BY c.time DESC`,
+      parameters: [{ name: "@deviceId", value: deviceId }],
     };
-
-    if (endTime) querySpec.parameters.push({ name: "@endTime", value: endTime });
-
     const { resources: items } = await container.items.query(querySpec).fetchAll();
-    return calculateTotalHeat(items);
+
+    if (items.length === 0) {
+      return res.status(404).json({ error: `No data found for deviceId: ${deviceId}` });
+    }
+
+    res.status(200).json(items[0]);
   } catch (error) {
-    console.error("Error fetching data:", error);
-    throw new Error("Failed to fetch data");
-  }
-}
-
-// **共通の熱量計算関数**
-function calculateTotalHeat(items) {
-  let totalHeatTransfer = 0;
-  items.forEach((data) => {
-    const flowRateLpm = data.Flow1 + data.Flow2;
-    const deltaT = data.tempC3 - data.tempC4;
-    const density = 1000;
-    const specificHeat = 4186;
-    const flowRateM3s = flowRateLpm / (1000 * 60);
-    const massFlowRate = flowRateM3s * density;
-    totalHeatTransfer += (massFlowRate * specificHeat * deltaT) / 1000;
-  });
-  return totalHeatTransfer.toFixed(2);
-}
-
-// **5分前の合計熱量**
-app.get("/api/data/five-minutes-total/:deviceId", async (req, res) => {
-  const deviceId = req.params.deviceId;
-  const now = new Date();
-  const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000).toISOString();
-
-  try {
-    const totalHeatTransfer = await fetchHeatData(deviceId, fiveMinutesAgo);
-    res.status(200).json({ fiveMinutesTotal: totalHeatTransfer });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// **1時間前の合計熱量**
-app.get("/api/data/hourly-total/:deviceId", async (req, res) => {
-  const deviceId = req.params.deviceId;
-  const now = new Date();
-  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
-
-  try {
-    const totalHeatTransfer = await fetchHeatData(deviceId, oneHourAgo);
-    res.status(200).json({ hourlyTotal: totalHeatTransfer });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error fetching latest data:", error);
+    res.status(500).json({ error: "Failed to fetch latest data" });
   }
 });
 
 // **昨日の合計熱量**
-app.get("/api/data/daily-total/:deviceId", async (req, res) => {
+app.get("/api/data/yesterday-total/:deviceId", async (req, res) => {
   const deviceId = req.params.deviceId;
   const now = new Date();
   const startOfYesterday = new Date(now);
@@ -103,13 +60,63 @@ app.get("/api/data/daily-total/:deviceId", async (req, res) => {
 
   try {
     const totalHeatTransfer = await fetchHeatData(deviceId, startOfYesterday.toISOString(), endOfYesterday.toISOString());
-    res.status(200).json({ dailyTotal: totalHeatTransfer });
+    res.status(200).json({ yesterdayTotal: totalHeatTransfer });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// **サーバー起動**
+// **今日の合計熱量**
+app.get("/api/data/today-total/:deviceId", async (req, res) => {
+  const deviceId = req.params.deviceId;
+  const now = new Date();
+  const startOfToday = new Date(now);
+  startOfToday.setHours(0, 0, 0, 0);
+
+  try {
+    const totalHeatTransfer = await fetchHeatData(deviceId, startOfToday.toISOString(), now.toISOString());
+    res.status(200).json({ todayTotal: totalHeatTransfer });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// **リアルタイム熱量計算関数**
+async function fetchHeatData(deviceId, startTime, endTime = null) {
+  const database = client.database(databaseId);
+  const container = database.container(containerId);
+
+  let querySpec = {
+    query: `SELECT c.Flow1, c.Flow2, c.tempC3, c.tempC4 FROM c 
+            WHERE c.device = @deviceId AND c.time >= @startTime`,
+    parameters: [
+      { name: "@deviceId", value: deviceId },
+      { name: "@startTime", value: startTime },
+    ],
+  };
+
+  if (endTime) {
+    querySpec.query += " AND c.time <= @endTime";
+    querySpec.parameters.push({ name: "@endTime", value: endTime });
+  }
+
+  const { resources: items } = await container.items.query(querySpec).fetchAll();
+  let totalHeatTransfer = 0;
+
+  items.forEach((data) => {
+    const flowRateLpm = (data.Flow1 || 0) + (data.Flow2 || 0);
+    const deltaT = (data.tempC3 || 0) - (data.tempC4 || 0);
+    const density = 1000; // kg/m³
+    const specificHeat = 4186; // J/(kg·K)
+    const flowRateM3s = flowRateLpm / (1000 * 60);
+    const massFlowRate = flowRateM3s * density;
+    totalHeatTransfer += (massFlowRate * specificHeat * deltaT) / 1000; // kW
+  });
+
+  return totalHeatTransfer.toFixed(2);
+}
+
+// サーバー起動
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
