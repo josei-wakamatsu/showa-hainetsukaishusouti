@@ -8,10 +8,11 @@ function App() {
   const [hourlyTotal, setHourlyTotal] = useState(0);
   const [error, setError] = useState("");
 
-  // Render のバックエンド URL に変更
-  const backendUrl = "https://hainetukaishusouti.onrender.com"; // Render のURLに置き換えてください
+  // Render のバックエンド URL
+  const backendUrl = "https://hainetukaishusouti.onrender.com"; // RenderのURLに置き換えてください
 
   useEffect(() => {
+    // 最新データ取得関数
     const fetchLatestData = async () => {
       try {
         const response = await axios.get(`${backendUrl}/api/data/hainetukaishu`);
@@ -49,6 +50,7 @@ function App() {
       }
     };
 
+    // 合計データ取得関数
     const fetchTotals = async () => {
       try {
         const [dailyRes, fiveMinRes, hourlyRes] = await Promise.all([
@@ -65,14 +67,17 @@ function App() {
       }
     };
 
+    // 初回データ取得
     fetchLatestData();
     fetchTotals();
 
+    // 5秒ごとにデータ更新
     const interval = setInterval(() => {
       fetchLatestData();
       fetchTotals();
-    }, 5000); // 5秒ごとにデータを取得
+    }, 5000);
 
+    // クリーンアップ
     return () => clearInterval(interval);
   }, [backendUrl]);
 
