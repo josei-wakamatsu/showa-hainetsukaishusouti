@@ -56,7 +56,6 @@ app.get("/api/data/:deviceId", async (req, res) => {
   }
 });
 
-
 // **昨日の合計熱量**
 app.get("/api/data/yesterday-total/:deviceId", async (req, res) => {
   const deviceId = req.params.deviceId;
@@ -85,6 +84,27 @@ app.get("/api/data/today-total/:deviceId", async (req, res) => {
   try {
     const totalHeatTransfer = await fetchHeatData(deviceId, startOfToday.toISOString(), now.toISOString());
     res.status(200).json({ todayTotal: totalHeatTransfer });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// **月別合計熱量**
+app.get("/api/data/monthly-total/:deviceId/:year/:month", async (req, res) => {
+  const deviceId = req.params.deviceId;
+  const year = parseInt(req.params.year);
+  const month = parseInt(req.params.month);
+
+  if (isNaN(year) || isNaN(month) || month < 1 || month > 12) {
+    return res.status(400).json({ error: "Invalid year or month parameter" });
+  }
+
+  const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999);
+
+  try {
+    const totalHeatTransfer = await fetchHeatData(deviceId, startOfMonth.toISOString(), endOfMonth.toISOString());
+    res.status(200).json({ monthlyTotal: totalHeatTransfer });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
