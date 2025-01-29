@@ -15,7 +15,7 @@ function App() {
         const response = await axios.get(`${backendUrl}/api/data/hainetukaishu`);
         const latestData = response.data;
 
-        if (!latestData.Flow1 || !latestData.Flow2 || !latestData.tempC3 || !latestData.tempC4) {
+        if (!latestData || latestData.error || latestData.Flow1 === undefined || latestData.Flow2 === undefined || latestData.tempC3 === undefined || latestData.tempC4 === undefined) {
           throw new Error("Invalid data received");
         }
 
@@ -34,8 +34,9 @@ function App() {
           heatTransfer: heatTransfer.toFixed(2),
         });
 
-        setError("");
+        setError(""); // エラーをリセット
       } catch (error) {
+        console.error("Failed to fetch latest data:", error.message);
         setError("Failed to fetch latest data: " + error.message);
       }
     };
@@ -60,7 +61,7 @@ function App() {
     const interval = setInterval(() => {
       fetchLatestData();
       fetchTotals();
-    }, 10000);
+    }, 5000);
 
     return () => clearInterval(interval);
   }, [backendUrl]);
