@@ -33,7 +33,7 @@ async function fetchHeatData(deviceId, startTime, endTime = null) {
 
     let querySpec = {
       query: `SELECT c.Flow1, c.Flow2, c.tempC3, c.tempC4 FROM c 
-              WHERE c.device = @deviceId AND c.time >= @startTime` + 
+              WHERE c.device = @deviceId AND c.time >= @startTime` +
               (endTime ? " AND c.time <= @endTime" : ""),
       parameters: [{ name: "@deviceId", value: deviceId }, { name: "@startTime", value: startTime }],
     };
