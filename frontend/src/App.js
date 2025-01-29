@@ -8,7 +8,6 @@ function App() {
   const [hourlyTotal, setHourlyTotal] = useState(0);
   const [error, setError] = useState("");
 
-  // バックエンドのURL
   const backendUrl = "https://hainetukaishusouti.onrender.com";
 
   useEffect(() => {
@@ -21,7 +20,6 @@ function App() {
           throw new Error("Invalid data received");
         }
 
-        // Flow1 + Flow2
         const flowRateLpm = latestData.Flow1 + latestData.Flow2;
         const deltaT = latestData.tempC3 - latestData.tempC4;
         const density = 1000; 
