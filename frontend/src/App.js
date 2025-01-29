@@ -5,6 +5,9 @@ function App() {
   const [latestItem, setLatestItem] = useState(null);
   const [yesterdayTotal, setYesterdayTotal] = useState(0);
   const [todayTotal, setTodayTotal] = useState(0);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [monthlyTotal, setMonthlyTotal] = useState(0);
   const [error, setError] = useState("");
 
   const backendUrl = "https://showa-hainetsukaishusouti.onrender.com";
@@ -16,7 +19,7 @@ function App() {
         const latestData = response.data;
 
         if (!latestData || latestData.error || latestData.Flow1 === undefined || latestData.Flow2 === undefined || latestData.tempC3 === undefined || latestData.tempC4 === undefined) {
-          throw new Error("Invalid data received");
+          throw new Error("データの取得に失敗しました");
         }
 
         const flowRateLpm = latestData.Flow1 + latestData.Flow2;
@@ -34,10 +37,10 @@ function App() {
           heatTransfer: heatTransfer.toFixed(2),
         });
 
-        setError(""); // エラーをリセット
+        setError(""); 
       } catch (error) {
-        console.error("Failed to fetch latest data:", error.message);
-        setError("Failed to fetch latest data: " + error.message);
+        console.error("最新データの取得に失敗しました:", error.message);
+        setError("最新データの取得に失敗しました: " + error.message);
       }
     };
 
@@ -51,7 +54,7 @@ function App() {
         setYesterdayTotal(Number(yesterdayRes.data.yesterdayTotal) || 0);
         setTodayTotal(Number(todayRes.data.todayTotal) || 0);
       } catch (error) {
-        console.error("Failed to fetch totals:", error);
+        console.error("累計データの取得に失敗しました:", error);
       }
     };
 
@@ -66,23 +69,47 @@ function App() {
     return () => clearInterval(interval);
   }, [backendUrl]);
 
+  // 選択した月のデータ取得
+  const fetchMonthlyTotal = async () => {
+    try {
+      const response = await axios.get(`${backendUrl}/api/data/monthly-total/hainetukaishu/${selectedYear}/${selectedMonth}`);
+      setMonthlyTotal(Number(response.data.monthlyTotal) || 0);
+    } catch (error) {
+      console.error("月別データの取得に失敗しました:", error);
+    }
+  };
+
   return (
     <div>
-      <h1>Real-Time Heat Energy Viewer</h1>
+      <h1>廃熱回収システム</h1>
       {error ? (
         <p style={{ color: "red" }}>{error}</p>
       ) : (
         <>
           {latestItem && (
             <div>
-              <h2>Latest Data</h2>
-              <p>Heat Transfer: {latestItem.heatTransfer} kW</p>
+              <h2>最新のデータ</h2>
+              <p>熱量: {latestItem.heatTransfer} kW</p>
             </div>
           )}
           <div>
-            <h2>Cumulative Data</h2>
-            <p>Yesterday Total: {yesterdayTotal} kW</p>
-            <p>Today Total: {todayTotal} kW</p>
+            <h2>累計データ</h2>
+            <p>昨日の合計熱量: {yesterdayTotal} kW</p>
+            <p>今日の合計熱量: {todayTotal} kW</p>
+          </div>
+
+          <div>
+            <h2>月別合計熱量</h2>
+            <label>
+              年:
+              <input type="number" value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} />
+            </label>
+            <label>
+              月:
+              <input type="number" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} min="1" max="12" />
+            </label>
+            <button onClick={fetchMonthlyTotal}>月のデータを取得</button>
+            <p>月合計熱量: {monthlyTotal} kW</p>
           </div>
         </>
       )}
