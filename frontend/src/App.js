@@ -8,7 +8,7 @@ function App() {
   const [hourlyTotal, setHourlyTotal] = useState(0);
   const [error, setError] = useState("");
 
-  const backendUrl = "https://hainetukaishusouti.onrender.com";
+  const backendUrl = "https://showa-hainetsukaishusouti.onrender.com";
 
   useEffect(() => {
     const fetchLatestData = async () => {
@@ -16,18 +16,17 @@ function App() {
         const response = await axios.get(`${backendUrl}/api/data/hainetukaishu`);
         const latestData = response.data;
 
-        if (!latestData || latestData.Flow1 === undefined || latestData.Flow2 === undefined ||
-            latestData.tempC3 === undefined || latestData.tempC4 === undefined) {
+        if (!latestData.Flow1 || !latestData.Flow2 || !latestData.tempC3 || !latestData.tempC4) {
           throw new Error("Invalid data received");
         }
 
         const flowRateLpm = latestData.Flow1 + latestData.Flow2;
         const deltaT = latestData.tempC3 - latestData.tempC4;
-        const density = 1000;
-        const specificHeat = 4186;
+        const density = 1000; 
+        const specificHeat = 4186; 
         const flowRateM3s = flowRateLpm / (1000 * 60);
         const massFlowRate = flowRateM3s * density;
-        const heatTransfer = (massFlowRate * specificHeat * deltaT) / 1000;
+        const heatTransfer = massFlowRate * specificHeat * deltaT / 1000; 
 
         setLatestItem({
           ...latestData,
@@ -77,13 +76,19 @@ function App() {
       ) : (
         <>
           {latestItem && (
-            <div style={{ border: "1px solid black", padding: "10px" }}>
+            <div style={{ marginBottom: "20px", border: "1px solid black", padding: "10px" }}>
               <h2>Latest Data</h2>
               <p><strong>Flow Rate (L/min):</strong> {latestItem.flowRateLpm}</p>
               <p><strong>Temperature Difference (TempC3 - TempC4):</strong> {latestItem.deltaT} °C</p>
               <p><strong>Heat Transfer:</strong> {latestItem.heatTransfer} kW</p>
             </div>
           )}
+          <div style={{ marginTop: "20px", border: "1px solid black", padding: "10px" }}>
+            <h2>Cumulative Data</h2>
+            <p><strong>Five Minutes Total:</strong> {fiveMinutesTotal.toFixed(2)} kW</p>
+            <p><strong>Hourly Total:</strong> {hourlyTotal.toFixed(2)} kW</p>
+            <p><strong>Daily Total:</strong> {dailyTotal.toFixed(2)} kW</p>
+          </div>
         </>
       )}
     </div>
