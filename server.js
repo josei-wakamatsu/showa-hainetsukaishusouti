@@ -41,12 +41,21 @@ app.get("/api/data/:deviceId", async (req, res) => {
       return res.status(404).json({ error: `No data found for deviceId: ${deviceId}` });
     }
 
-    res.status(200).json(items[0]);
+    const latestData = items[0];
+
+    // Null や undefined の場合は 0 に置き換える
+    latestData.Flow1 = latestData.Flow1 || 0;
+    latestData.Flow2 = latestData.Flow2 || 0;
+    latestData.tempC3 = latestData.tempC3 || 0;
+    latestData.tempC4 = latestData.tempC4 || 0;
+
+    res.status(200).json(latestData);
   } catch (error) {
     console.error("Error fetching latest data:", error);
     res.status(500).json({ error: "Failed to fetch latest data" });
   }
 });
+
 
 // **昨日の合計熱量**
 app.get("/api/data/yesterday-total/:deviceId", async (req, res) => {
